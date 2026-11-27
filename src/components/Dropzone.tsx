@@ -47,6 +47,10 @@ export function Dropzone({ onFile, onSample }: Props) {
       >
         or try a generated sample page
       </button>
+      <p className="mt-6 max-w-md text-xs text-muted-foreground">
+        Equations aren't recognized: math regions come out as garbled text, not LaTeX. Charts aren't converted to
+        tables either.
+      </p>
       <input
         ref={input}
         type="file"

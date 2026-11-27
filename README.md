@@ -16,7 +16,8 @@ are downloaded from Hugging Face (sha256-verified, then cached by the browser).
 | All scripts | 13 MB | + CJK, Arabic/Hebrew and ~17 other scripts |
 | All scripts + tables & layout | 30 MB | + LayoutNet: tables, headings, lists |
 
-Pages that already have a PDF text layer are not OCR'd. OCR runs on one thread, roughly 1–4 s per scanned page.
+Pages that already have a PDF text layer are not OCR'd. Known limits (from the technical report): equations on scanned
+pages are not recovered (math comes out as garbled text, not LaTeX) and charts are not converted to tables. OCR runs on one thread, roughly 1–4 s per scanned page.
 
 ## Develop
 
