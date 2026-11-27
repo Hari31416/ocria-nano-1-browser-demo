@@ -7,6 +7,7 @@ import { Dropzone } from '@/components/Dropzone'
 import { MarkdownView } from '@/components/MarkdownView'
 import { PageViewer } from '@/components/PageViewer'
 import { makeSamplePage } from '@/lib/sample'
+import { copyText } from '@/lib/copy'
 import { pageToJson } from '@/lib/json'
 import { PROFILES, type FromWorker, type Parsed, type Profile, type ToWorker } from '@/lib/protocol'
 
@@ -41,6 +42,7 @@ export default function App() {
   const [state, setState] = useState<State>({ kind: 'idle' })
   const [profile, setProfile] = useState<Profile>('full')
   const [pageIdx, setPageIdx] = useState(0)
+  const [copied, setCopied] = useState<'ok' | 'fail' | null>(null)
   const [view, setView] = useState<'rendered' | 'markdown' | 'json'>('rendered')
   const worker = useRef<Worker>(undefined)
   const job = useRef({ id: 0, name: '', bytes: undefined as Uint8Array | undefined })
@@ -218,8 +220,12 @@ export default function App() {
                   <TabsTrigger value="markdown">Markdown</TabsTrigger>
                   <TabsTrigger value="json">JSON</TabsTrigger>
                 </TabsList>
-                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(view === 'json' ? json : page.markdown)}>
-                  {view === 'json' ? 'Copy JSON' : 'Copy markdown'}
+                <Button variant="ghost" size="sm" onClick={async () => {
+                    setCopied((await copyText(view === 'json' ? json : page.markdown)) ? 'ok' : 'fail')
+                    setTimeout(() => setCopied(null), 1500)
+                  }}
+                >
+                  {copied === 'ok' ? 'Copied' : copied === 'fail' ? 'Copy failed' : view === 'json' ? 'Copy JSON' : 'Copy markdown'}
                 </Button>
               </div>
               <TabsContent value="rendered" className="mt-3 max-h-[75vh] overflow-auto rounded-lg border p-4">
