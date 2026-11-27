@@ -54,6 +54,8 @@ export interface Page {
   blocks: Block[]
   /** rendered page PNG */
   image?: Blob
+  /** images embedded in the page, keyed by the target the markdown uses (`img_p1_1.jpg`) */
+  images: Record<string, Blob>
 }
 
 export interface Parsed {

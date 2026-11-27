@@ -110,6 +110,8 @@ async function run({ id, bytes, profile }: Extract<ToWorker, { type: 'parse' }>)
       outputFormat: 'markdown',
       extractBlocks: true,
       extractScreenshots: true,
+      imageMode: 'embed',
+      extractImages: true,
       quiet: true,
       onOcrPage: () => {
         ocrDone++
@@ -127,6 +129,12 @@ async function run({ id, bytes, profile }: Extract<ToWorker, { type: 'parse' }>)
   const shots = new Map(res.screenshots.map((s) => [s.pageNum, s]))
   const pages: Page[] = res.pages.map((p) => {
     const shot = shots.get(p.pageNum)
+    const images: Record<string, Blob> = {}
+    for (const img of res.images) {
+      if (img.page !== p.pageNum || !img.bytes.length) continue
+      const type = img.format === 'jpg' ? 'image/jpeg' : `image/${img.format}`
+      images[`img_${img.id}.${img.format}`] = new Blob([new Uint8Array(img.bytes)], { type })
+    }
     const image = shot ? new Blob([new Uint8Array(shot.imageBytes)], { type: 'image/png' }) : undefined
     return {
       pageNum: p.pageNum,
@@ -144,6 +152,7 @@ async function run({ id, bytes, profile }: Extract<ToWorker, { type: 'parse' }>)
       // drop the always-present false/undefined flags so the JSON stays readable
       blocks: (p.blocks ?? []).map((b) => JSON.parse(JSON.stringify(b, (_, v) => (v === false ? undefined : v)))),
       image,
+      images,
     }
   })
   post({ type: 'done', id, result: { markdown: res.text, pages, ocrPages: ocrDone, ms } })

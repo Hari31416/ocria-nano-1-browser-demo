@@ -17,7 +17,7 @@ are downloaded from Hugging Face (sha256-verified, then cached by the browser).
 | All scripts + tables & layout | 30 MB | + LayoutNet: tables, headings, lists |
 
 Pages that already have a PDF text layer are not OCR'd. Known limits (from the technical report): equations on scanned
-pages are not recovered (math comes out as garbled text, not LaTeX) and charts are not converted to tables. OCR runs on one thread, roughly 1–4 s per scanned page.
+pages are not recovered (math comes out as garbled text, not LaTeX) and charts are not converted to tables. Images embedded in a digital PDF are shown in the rendered output (and listed as `figure` blocks); a photo on a scanned page or photo is not detected. OCR runs on one thread, roughly 1–4 s per scanned page.
 
 ## Develop
 

@@ -49,7 +49,7 @@ export function Dropzone({ onFile, onSample }: Props) {
       </button>
       <p className="mt-6 max-w-md text-xs text-muted-foreground">
         Equations aren't recognized: math regions come out as garbled text, not LaTeX. Charts aren't converted to
-        tables either.
+        tables either. Pictures are kept only when they are embedded in a PDF; a photo on a scanned page is skipped.
       </p>
       <input
         ref={input}

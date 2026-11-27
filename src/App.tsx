@@ -229,7 +229,7 @@ export default function App() {
                 </Button>
               </div>
               <TabsContent value="rendered" className="mt-3 max-h-[75vh] overflow-auto rounded-lg border p-4">
-                <MarkdownView>{page.markdown}</MarkdownView>
+                <MarkdownView images={page.images}>{page.markdown}</MarkdownView>
               </TabsContent>
               <TabsContent value="markdown" className="mt-3">
                 <pre className="max-h-[75vh] overflow-auto rounded-lg border bg-muted/40 p-4 font-mono text-xs whitespace-pre-wrap">
