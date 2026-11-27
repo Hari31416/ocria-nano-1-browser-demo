@@ -9,11 +9,23 @@ const BLOCK_COLORS: Record<string, string> = {
   paragraph: '#2563eb',
   list_item: '#7c3aed',
   table: '#059669',
+  merged_table: '#0d9488',
   figure: '#d97706',
   code: '#0891b2',
   rule: '#64748b',
+  page_header: '#c026d3',
+  page_footer: '#db2777',
 }
-const blockColor = (kind: string) => BLOCK_COLORS[kind] ?? '#64748b'
+
+// known classes get a fixed colour; any other LayoutNet class gets a stable hue derived from its name
+function blockColor(kind: string) {
+  if (BLOCK_COLORS[kind]) return BLOCK_COLORS[kind]
+  let h = 0
+  for (const ch of kind) h = (h * 31 + ch.charCodeAt(0)) % 360
+  return `hsl(${h} 70% 45%)`
+}
+
+const label = (kind: string) => kind.replaceAll('_', ' ')
 
 function pct(b: Box, page: Page) {
   return {
@@ -35,27 +47,26 @@ export function PageViewer({ page }: { page: Page }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <Tabs value={overlay} onValueChange={(v) => setOverlay(v as Overlay)}>
-          <TabsList>
-            <TabsTrigger value="lines">Text lines</TabsTrigger>
-            <TabsTrigger value="blocks" disabled={!page.blocks.length}>
-              Layout blocks
-            </TabsTrigger>
-            <TabsTrigger value="off">Plain</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        {overlay === 'blocks' && (
-          <ul className="hidden flex-wrap justify-end gap-x-3 gap-y-1 text-xs text-muted-foreground sm:flex">
-            {kinds.map((k) => (
-              <li key={k} className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full" style={{ background: blockColor(k) }} />
-                {k.replace('_', ' ')}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <Tabs value={overlay} onValueChange={(v) => setOverlay(v as Overlay)}>
+        <TabsList>
+          <TabsTrigger value="lines">Text lines</TabsTrigger>
+          <TabsTrigger value="blocks" disabled={!page.blocks.length}>
+            Layout blocks
+          </TabsTrigger>
+          <TabsTrigger value="off">Plain</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {overlay === 'blocks' && (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          {kinds.map((k) => (
+            <li key={k} className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-[3px]" style={{ background: blockColor(k) }} />
+              {label(k)}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div
         className="relative w-full overflow-hidden rounded-lg border bg-white shadow-sm"
@@ -77,7 +88,7 @@ export function PageViewer({ page }: { page: Page }) {
             b.bbox ? (
               <div
                 key={i}
-                onMouseEnter={() => setHover(`${b.kind.replace('_', ' ')}${b.text ? `  ·  ${b.text}` : ''}`)}
+                onMouseEnter={() => setHover(`${label(b.kind)}${b.text ? `  ·  ${b.text}` : ''}`)}
                 onMouseLeave={() => setHover(null)}
                 className="absolute rounded-[3px] border-2 opacity-80 hover:opacity-100"
                 style={{ ...pct(b.bbox, page), borderColor: blockColor(b.kind), background: `${blockColor(b.kind)}1f` }}

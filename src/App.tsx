@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,9 +11,21 @@ import { PROFILES, type FromWorker, type Parsed, type Profile, type ToWorker } f
 
 type State =
   | { kind: 'idle' }
-  | { kind: 'busy'; name: string; status: string; ocrDone: number; since: number }
+  | { kind: 'busy'; name: string; status: string; fraction: number | null; since: number }
   | { kind: 'done'; name: string; result: Parsed }
   | { kind: 'error'; name: string; message: string }
+
+function ProgressBar({ fraction }: { fraction: number | null }) {
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={fraction == null ? undefined : Math.round(fraction * 100)}>
+      {fraction == null ? (
+        <div className="h-full w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] rounded-full bg-foreground/70" />
+      ) : (
+        <div className="h-full rounded-full bg-foreground transition-[width] duration-300" style={{ width: `${fraction * 100}%` }} />
+      )}
+    </div>
+  )
+}
 
 function Elapsed({ since }: { since: number }) {
   const [, tick] = useState(0)
@@ -37,8 +50,8 @@ export default function App() {
         const m = e.data
         if (m.id !== job.current.id) return // stale
         const name = job.current.name
-        if (m.type === 'status') setState((s) => (s.kind === 'busy' ? { ...s, status: m.text } : s))
-        else if (m.type === 'ocr-page') setState((s) => (s.kind === 'busy' ? { ...s, ocrDone: m.done } : s))
+        if (m.type === 'progress')
+          setState((s) => (s.kind === 'busy' ? { ...s, status: m.text, fraction: m.fraction } : s))
         else if (m.type === 'done') {
           setPageIdx(0)
           setState({ kind: 'done', name, result: m.result })
@@ -48,7 +61,7 @@ export default function App() {
     const id = ++job.current.id
     job.current.name = name
     job.current.bytes = bytes
-    setState({ kind: 'busy', name, status: 'Starting…', ocrDone: 0, since: performance.now() })
+    setState({ kind: 'busy', name, status: 'Starting…', fraction: null, since: performance.now() })
     // copy: the original bytes are kept so the document can be re-run with another model set
     const msg: ToWorker = { type: 'parse', id, bytes: bytes.slice(), profile: p }
     worker.current.postMessage(msg)
@@ -68,7 +81,19 @@ export default function App() {
 
   const busy = state.kind === 'busy'
   const result = state.kind === 'done' ? state.result : undefined
-  const page = result?.pages[Math.min(pageIdx, result.pages.length - 1)]
+  const pageCount = result?.pages.length ?? 0
+  const page = result?.pages[Math.min(pageIdx, pageCount - 1)]
+
+  useEffect(() => {
+    if (pageCount < 2) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [role=combobox], [role=tab]')) return
+      if (e.key === 'ArrowLeft') setPageIdx((i) => Math.max(0, i - 1))
+      if (e.key === 'ArrowRight') setPageIdx((i) => Math.min(pageCount - 1, i + 1))
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [pageCount])
 
   return (
     <div className="mx-auto flex min-h-svh max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
@@ -120,17 +145,17 @@ export default function App() {
       {state.kind === 'idle' && <Dropzone onFile={onFile} onSample={onSample} />}
 
       {state.kind === 'busy' && (
-        <div className="flex min-h-72 flex-col items-center justify-center gap-2 rounded-2xl border text-center">
-          <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
-          <p className="mt-2 font-medium">{state.name}</p>
+        <div className="flex min-h-72 flex-col items-center justify-center gap-3 rounded-2xl border px-6 text-center">
+          <p className="font-medium">{state.name}</p>
+          <div className="w-full max-w-md">
+            <ProgressBar fraction={state.fraction} />
+          </div>
           <p className="text-sm text-muted-foreground">
-            {state.status}
-            {state.ocrDone > 0 && ` · ${state.ocrDone} page${state.ocrDone > 1 ? 's' : ''} read`} ·{' '}
-            <Elapsed since={state.since} />
+            {state.status} · <Elapsed since={state.since} />
           </p>
           <p className="max-w-md text-xs text-muted-foreground">
-            The first run downloads and verifies the models (cached by the browser afterwards). OCR runs on one thread:
-            expect a few seconds per page.
+            Models are downloaded once and kept in this browser. OCR runs on one thread: expect a few seconds per
+            page.
           </p>
         </div>
       )}
@@ -154,16 +179,30 @@ export default function App() {
             </p>
           </div>
 
-          {result.pages.length > 1 && (
-            <Tabs value={String(pageIdx)} onValueChange={(v) => setPageIdx(Number(v))}>
-              <TabsList className="max-w-full overflow-x-auto">
-                {result.pages.map((p, i) => (
-                  <TabsTrigger key={p.pageNum} value={String(i)}>
-                    Page {p.pageNum}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+          {pageCount > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Previous page"
+                disabled={pageIdx === 0}
+                onClick={() => setPageIdx(pageIdx - 1)}
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="min-w-28 text-center text-sm tabular-nums">
+                Page {page.pageNum} of {pageCount}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Next page"
+                disabled={pageIdx >= pageCount - 1}
+                onClick={() => setPageIdx(pageIdx + 1)}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
           )}
 
           <div className="grid gap-6 lg:grid-cols-2">
