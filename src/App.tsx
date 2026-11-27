@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -7,6 +7,7 @@ import { Dropzone } from '@/components/Dropzone'
 import { MarkdownView } from '@/components/MarkdownView'
 import { PageViewer } from '@/components/PageViewer'
 import { makeSamplePage } from '@/lib/sample'
+import { pageToJson } from '@/lib/json'
 import { PROFILES, type FromWorker, type Parsed, type Profile, type ToWorker } from '@/lib/protocol'
 
 type State =
@@ -40,6 +41,7 @@ export default function App() {
   const [state, setState] = useState<State>({ kind: 'idle' })
   const [profile, setProfile] = useState<Profile>('full')
   const [pageIdx, setPageIdx] = useState(0)
+  const [view, setView] = useState<'rendered' | 'markdown' | 'json'>('rendered')
   const worker = useRef<Worker>(undefined)
   const job = useRef({ id: 0, name: '', bytes: undefined as Uint8Array | undefined })
 
@@ -83,6 +85,8 @@ export default function App() {
   const result = state.kind === 'done' ? state.result : undefined
   const pageCount = result?.pages.length ?? 0
   const page = result?.pages[Math.min(pageIdx, pageCount - 1)]
+
+  const json = useMemo(() => (page ? pageToJson(page) : ''), [page])
 
   useEffect(() => {
     if (pageCount < 2) return
@@ -207,14 +211,15 @@ export default function App() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PageViewer page={page} />
-            <Tabs defaultValue="rendered" className="min-w-0">
+            <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="min-w-0">
               <div className="flex items-center justify-between">
                 <TabsList>
                   <TabsTrigger value="rendered">Rendered</TabsTrigger>
                   <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                  <TabsTrigger value="json">JSON</TabsTrigger>
                 </TabsList>
-                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(page.markdown)}>
-                  Copy markdown
+                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(view === 'json' ? json : page.markdown)}>
+                  {view === 'json' ? 'Copy JSON' : 'Copy markdown'}
                 </Button>
               </div>
               <TabsContent value="rendered" className="mt-3 max-h-[75vh] overflow-auto rounded-lg border p-4">
@@ -224,6 +229,9 @@ export default function App() {
                 <pre className="max-h-[75vh] overflow-auto rounded-lg border bg-muted/40 p-4 font-mono text-xs whitespace-pre-wrap">
                   {page.markdown || 'No text found on this page.'}
                 </pre>
+              </TabsContent>
+              <TabsContent value="json" className="mt-3">
+                <pre className="max-h-[75vh] overflow-auto rounded-lg border bg-muted/40 p-4 font-mono text-xs">{json}</pre>
               </TabsContent>
             </Tabs>
           </div>

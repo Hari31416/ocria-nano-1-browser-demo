@@ -141,7 +141,8 @@ async function run({ id, bytes, profile }: Extract<ToWorker, { type: 'parse' }>)
         height,
         confidence,
       })),
-      blocks: (p.blocks ?? []).map(({ kind, text, bbox }) => ({ kind, text, bbox })),
+      // drop the always-present false/undefined flags so the JSON stays readable
+      blocks: (p.blocks ?? []).map((b) => JSON.parse(JSON.stringify(b, (_, v) => (v === false ? undefined : v)))),
       image,
     }
   })

@@ -27,6 +27,8 @@ export const PROFILES: Record<
   },
 }
 
+import type { LayoutBlock } from '@llamaindex/liteparse-wasm'
+
 export interface Box {
   x: number
   y: number
@@ -39,11 +41,8 @@ export interface Line extends Box {
   confidence?: number
 }
 
-export interface Block {
-  kind: string
-  text?: string
-  bbox?: Box
-}
+/** LayoutNet block: kind, text, bbox, table header/rows, list markers, and indices into `lines` */
+export type Block = LayoutBlock
 
 export interface Page {
   pageNum: number
